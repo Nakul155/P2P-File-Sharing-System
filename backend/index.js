@@ -1,9 +1,9 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { v4 as uuidv4 } from "uuid";
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
-const wss = new WebSocket.Server({ port: PORT }, () => {
+const wss = new WebSocketServer({ port: PORT }, () => {
   console.log(`WebSocket server running on port ${PORT}`);
 });
 
