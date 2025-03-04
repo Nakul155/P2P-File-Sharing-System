@@ -6,7 +6,9 @@ export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080");
+    const ws = new WebSocket(
+      "wss://p2p-file-sharing-system-rsnt.onrender.com"
+    );
     setSocket(ws);
     return () => {
       ws.close();

@@ -13,8 +13,21 @@ function Room() {
   const roomId = searchParams.get("roomId");
   const userName = location.state?.userName;
 
+  if (!userName) {
+    console.log(1);
+    window.location.href = "/";
+    return null;
+  }
+
+  if (!socket) {
+    console.error("WebSocket not initialized!");
+    window.location.href = "/";
+    return null;
+  }
+
   const [users, setUsers] = useState(new Map());
   const peerConnections = useRef(new Map());
+  const dataChannels = useRef(new Map());
   const userId = useRef();
 
   useEffect(() => {
@@ -30,7 +43,7 @@ function Room() {
           handleNewMember(message);
           break;
         case "offer":
-          await handleOffer(message); 
+          await handleOffer(message);
           break;
         case "answer":
           await handleAnswer(message);
@@ -78,10 +91,13 @@ function Room() {
 
     peerConnections.current.set(targetUserId, pc);
 
+    const dataChannel = pc.createDataChannel("File Sharing");
+    setUpDataChannel(dataChannel, targetUserId);
+
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    if(pc.localDescription){
+    if (pc.localDescription) {
       pc.onicecandidate = (event) => {
         if (event.candidate) {
           console.log("Ice Candidates Generated");
@@ -124,6 +140,10 @@ function Room() {
 
     peerConnections.current.set(message.userId, pc);
     await pc.setRemoteDescription(new RTCSessionDescription(message.sdp));
+
+    pc.ondatachannel = (event) => {
+      setUpDataChannel(event.channel, message.userId);
+    };
 
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
@@ -183,9 +203,56 @@ function Room() {
       newUsers.delete(message.userId);
       return newUsers;
     });
-  }
+  };
 
-  return <RoomLayout hostName={userName} users={users} roomId={roomId}></RoomLayout>;
+  const setUpDataChannel = (dataChannel, targetUserId) => {
+    dataChannels.current.set(targetUserId, dataChannel);
+
+    dataChannel.onopen = () =>
+      console.log(`Data channel open with ${targetUserId}`);
+    // dataChannel.onmessage = handleFileReceive;
+    dataChannel.onclose = () => dataChannels.current.delete(targetUserId);
+  };
+
+  const sendFile = (targetUserId, file) => {
+    const dataChannel = dataChannels.get(targetUserId);
+    if (!dataChannel || dataChannel.readyState !== "open") {
+      console.log("Data Channel Not Open");
+      return;
+    }
+
+    dataChannel.send(
+      JSON.stringify({
+        type: "metadata",
+        fileName: file.name,
+        fileSize: file.size,
+      })
+    );
+
+    const chunkSize = 16 * 1024;
+    let offset = 0;
+
+    const sendNextChunk = () => {
+      if (offset < file.size) {
+        const chunk = file.slice(offset, offset + chunkSize);
+        chunk.arrayBuffer().then((buffer) => {
+          dataChannel.send(buffer);
+          offset += chunkSize;
+          setTimeout(sendNextChunk, 10);
+        });
+      } else {
+        dataChannel.send("EOF"); // Marks end of file
+      }
+    };
+
+    sendNextChunk();
+  };
+
+  
+
+  return (
+    <RoomLayout hostName={userName} users={users} roomId={roomId}></RoomLayout>
+  );
 }
 
 export default Room;

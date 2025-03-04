@@ -1,3 +1,5 @@
+import Dropdown from "./Dropdown";
+
 const ListItem = ({ children }) => (
   <li className="bg-light-blue py-4 px-4 rounded-[10px] my-4 text-lg">
     {children}
@@ -5,7 +7,6 @@ const ListItem = ({ children }) => (
 );
 
 function RoomLayout(props) {
-  console.log(props.users);
   return (
     <div className="grid grid-cols-3 grid-rows-6 h-screen gap-7 bg-blue-black">
       <div className="flex items-center justify-between bg-dark-blue-black col-span-full rounded-[30px] mt-5 mx-5">
@@ -24,7 +25,9 @@ function RoomLayout(props) {
           ))}
         </ul>
       </div>
-      <div className="bg-dark-blue-black col-span-2 row-span-5 rounded-[30px] mr-5 mb-5"></div>
+      <div className="bg-dark-blue-black col-span-2 row-span-5 rounded-[30px] mr-5 mb-5">
+        <Dropdown users={props.users}></Dropdown>
+      </div>
     </div>
   );
 }
