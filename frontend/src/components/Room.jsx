@@ -26,6 +26,7 @@ function Room() {
   }
 
   const [users, setUsers] = useState(new Map());
+  const [msg, setMsg] = useState([]);
   const peerConnections = useRef(new Map());
   const dataChannels = useRef(new Map());
   const userId = useRef();
@@ -58,6 +59,8 @@ function Room() {
         case "ice-candidate":
           await handleIceCandidates(message);
           break;
+        case "chat-message":
+          setMsg((prev) => [...prev, {senderId: message.senderId, msg: message.msg}]);
         case "error":
           alert(message.message);
           navigate("/");
@@ -208,14 +211,49 @@ function Room() {
   const setUpDataChannel = (dataChannel, targetUserId) => {
     dataChannels.current.set(targetUserId, dataChannel);
 
+    let incomingFileInfo = null;
+    let incomingFileData = [];
+
     dataChannel.onopen = () =>
       console.log(`Data channel open with ${targetUserId}`);
-    // dataChannel.onmessage = handleFileReceive;
+    
+    dataChannel.onmessage = (event) => {
+      if (typeof event.data === "string"){
+        if(event.data === "EOF"){
+          const receivedBlob = new Blob(incomingFileData);
+          const downloadLink = document.createElement("a");
+          downloadLink.href = URL.createObjectURL(receivedBlob);
+          downloadLink.download = incomingFileInfo?.fileName || "download";
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          downloadLink.remove();
+          URL.revokeObjectURL(downloadLink.href);
+
+          console.log(`Download complete: ${incomingFileInfo?.fileName}`);
+          incomingFileInfo = null;
+          incomingFileData = [];
+        }
+        else{
+          const parsed = JSON.parse(event.data);
+          if (parsed.type === "metadata") {
+            incomingFileInfo = parsed;
+            incomingFileData = [];
+            console.log(
+              `Receiving file: ${parsed.fileName} (${parsed.fileSize} bytes)`
+            );
+          }
+        }
+      }
+      else{
+        incomingFileData.push(event.data);
+      }
+    }
+
     dataChannel.onclose = () => dataChannels.current.delete(targetUserId);
   };
 
   const sendFile = (targetUserId, file) => {
-    const dataChannel = dataChannels.get(targetUserId);
+    const dataChannel = dataChannels.current.get(targetUserId);
     if (!dataChannel || dataChannel.readyState !== "open") {
       console.log("Data Channel Not Open");
       return;
@@ -241,17 +279,17 @@ function Room() {
           setTimeout(sendNextChunk, 10);
         });
       } else {
-        dataChannel.send("EOF"); // Marks end of file
+        dataChannel.send("EOF");
       }
     };
 
     sendNextChunk();
   };
 
-  
+  console.log(users);
 
   return (
-    <RoomLayout hostName={userName} users={users} roomId={roomId}></RoomLayout>
+    <RoomLayout hostName={userName} users={users} roomId={roomId} sendFile={sendFile}></RoomLayout>
   );
 }
 

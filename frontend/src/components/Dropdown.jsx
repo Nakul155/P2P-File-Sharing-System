@@ -20,6 +20,12 @@ function Dropdown(props) {
   };
 
   const resetSelection = () => {
+    // props.sendFile(selectedUser,)
+    if(selectedUser==="" || !file){
+      alert("Select a user and add the file to send");
+      return;
+    }
+    props.sendFile(selectedUser,file);
     setSelectedUser("");
     setFile(null);
   }
@@ -28,7 +34,11 @@ function Dropdown(props) {
     <div>
       <div className="text-white mx-8 mt-8 text-2xl">Send to:</div>
       <div className="flex mt-4 mx-8 gap-2">
-        <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} className="bg-light-blue h-[7vh] flex-grow text-white py-2 px-4 rounded-md border-none focus:outline-none appearance-none">
+        <select
+          value={selectedUser}
+          onChange={(e) => setSelectedUser(e.target.value)}
+          className="bg-light-blue h-[7vh] flex-grow text-white py-2 px-4 rounded-md border-none focus:outline-none appearance-none"
+        >
           <option value="">Select recipient</option>
           {[...props.users].map(([id, user]) => (
             <option key={id} value={id}>
@@ -36,7 +46,10 @@ function Dropdown(props) {
             </option>
           ))}
         </select>
-        <button onClick={resetSelection} className="bg-indigo border-2 h-[7vh] border-indigo text-white rounded-md px-4 hover:bg-transparent hover:text-indigo transition-colors">
+        <button
+          onClick={resetSelection}
+          className="hover:cursor-pointer bg-indigo border-2 h-[7vh] border-indigo text-white rounded-md px-4 hover:bg-transparent hover:text-indigo transition-colors"
+        >
           Send File
         </button>
       </div>

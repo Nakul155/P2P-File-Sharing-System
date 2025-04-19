@@ -1,12 +1,21 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useNavigationType } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useWebSocket } from "./WebSocketContext";
 
 function CreateRoom() {
   const navigate = useNavigate();
   const location = useLocation();
+  const navigationType = useNavigationType();
   const socket = useWebSocket();
   const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    if (navigationType==="POP") {
+      navigate("/");
+      window.location.reload();
+      console.log("Sent message to signaling server");
+    }
+  }, [location, navigationType]);
 
   const handleClick = (event) => {
     event.preventDefault();

@@ -6,9 +6,7 @@ export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket(
-      "wss://p2p-file-sharing-system-rsnt.onrender.com"
-    );
+    const ws = new WebSocket(import.meta.env.VITE_APP_WEBSOCKET_URL);
     setSocket(ws);
     return () => {
       ws.close();

@@ -1,9 +1,9 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { v4 as uuidv4 } from "uuid";
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-const wss = new WebSocketServer({ port: PORT }, () => {
+const wss = new WebSocketServer({ port: PORT, host: "0.0.0.0" }, () => {
   console.log(`WebSocket server running on port ${PORT}`);
 });
 
@@ -18,7 +18,6 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     const userId = webSocketUserId.get(ws);
     if (!userId) {
-      console.log(0);
       return;
     }
     const roomId = userIdroomId.get(userId);
@@ -27,6 +26,7 @@ wss.on("connection", (ws) => {
       webSocketUserId.delete(ws);
       return;
     }
+    console.log(`${userId} has left the ${roomId}`);
     const members = roomIdMembers.get(roomId);
     members.forEach((memberId) => {
       const memberWs = userIdWebSocket.get(memberId);
@@ -39,7 +39,7 @@ wss.on("connection", (ws) => {
       }
     });
     const updatedMembers = members.filter((memberId) => memberId !== userId);
-    if (updatedMembers.size === 0) {
+    if (!updatedMembers.length) {
       roomIdMembers.delete(roomId);
     } else {
       roomIdMembers.set(roomId, updatedMembers);
@@ -82,7 +82,7 @@ wss.on("connection", (ws) => {
           );
         }
       });
-      console.log(`${message.userName} joined the room`);
+      console.log(`${message.userName} joined the room ${roomId}`);
       room.push(userId);
       roomIdMembers.set(roomId, room);
       userIdroomId.set(userId, roomId);
@@ -94,7 +94,9 @@ wss.on("connection", (ws) => {
       const roomId = userIdroomId.get(message.targetUserId);
       const targetUserId = message.targetUserId;
       const targetPeerWs = userIdWebSocket.get(targetUserId);
-      console.log(message.type + message.targetUserId);
+      console.log(
+        `${message.userId} has sent ${message.type} to ${targetUserId}`
+      );
       if (!roomIdMembers.has(roomId) || !targetPeerWs) {
         ws.send(
           JSON.stringify({
@@ -136,6 +138,21 @@ wss.on("connection", (ws) => {
       console.log(
         `${message.userId} has sent ice-candidate to ${targetUserId}`
       );
+    } else if (message.type === "chat-message") {
+      // {type = "chat-message", roomId, msg, senderId}
+      const room = userIdroomId.get(senderId);
+      room.forEach((memberId) => {
+        if (memberId !== senderId) {
+          const memberWs = userIdWebSocket.get(memberId);
+          memberWs.send(
+            JSON.stringify({
+              type: "chat-message",
+              senderId: senderId,
+              msg: msg,
+            })
+          );
+        }
+      });
     }
   });
 });
