@@ -30,6 +30,7 @@ function Room() {
   const peerConnections = useRef(new Map());
   const dataChannels = useRef(new Map());
   const userId = useRef();
+  const usersRef = useRef(users);
 
   useEffect(() => {
     socket.send(
@@ -60,10 +61,15 @@ function Room() {
           await handleIceCandidates(message);
           break;
         case "chat-message":
-          setMsg((prev) => [...prev, {senderId: message.senderId, msg: message.msg}]);
+          setMsg((prev) => [
+            ...prev,
+            { senderId: message.senderId, msg: message.msg },
+          ]);
+          break;
         case "error":
           alert(message.message);
-          navigate("/");
+          console.log(message);
+          //window.location.href = "/";
           break;
         default:
           console.log("Unknown message type", message);
@@ -216,10 +222,10 @@ function Room() {
 
     dataChannel.onopen = () =>
       console.log(`Data channel open with ${targetUserId}`);
-    
+
     dataChannel.onmessage = (event) => {
-      if (typeof event.data === "string"){
-        if(event.data === "EOF"){
+      if (typeof event.data === "string") {
+        if (event.data === "EOF") {
           const receivedBlob = new Blob(incomingFileData);
           const downloadLink = document.createElement("a");
           downloadLink.href = URL.createObjectURL(receivedBlob);
@@ -232,8 +238,7 @@ function Room() {
           console.log(`Download complete: ${incomingFileInfo?.fileName}`);
           incomingFileInfo = null;
           incomingFileData = [];
-        }
-        else{
+        } else {
           const parsed = JSON.parse(event.data);
           if (parsed.type === "metadata") {
             incomingFileInfo = parsed;
@@ -243,11 +248,10 @@ function Room() {
             );
           }
         }
-      }
-      else{
+      } else {
         incomingFileData.push(event.data);
       }
-    }
+    };
 
     dataChannel.onclose = () => dataChannels.current.delete(targetUserId);
   };
@@ -286,10 +290,34 @@ function Room() {
     sendNextChunk();
   };
 
+  const sendMessage = (textMsg) => {
+    if (textMsg.trim() !== "") {
+      socket.send(
+        JSON.stringify({
+          type: "chat-message",
+          senderId: userId.current,
+          msg: textMsg,
+        })
+      );
+      setMsg((prev) => [
+        ...prev,
+        { senderId: userId.current, msg: textMsg },
+      ]);
+    }
+  };
+
   console.log(users);
 
   return (
-    <RoomLayout hostName={userName} users={users} roomId={roomId} sendFile={sendFile}></RoomLayout>
+    <RoomLayout
+      hostName={userName}
+      hostId = {userId.current}
+      users={users}
+      roomId={roomId}
+      sendFile={sendFile}
+      msg={msg}
+      sendMessage={sendMessage}
+    ></RoomLayout>
   );
 }
 

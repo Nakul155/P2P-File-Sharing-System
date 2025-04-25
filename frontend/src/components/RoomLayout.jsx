@@ -10,6 +10,10 @@ const ListItem = ({ children }) => (
 
 function RoomLayout(props) {
   const [displayChat, setDisplayChat] = new useState(false);
+  const [messageInput, setMessageInput] = useState("");
+
+  console.log(props.msg);
+
   return (
     <div className="grid grid-cols-3 grid-rows-6 h-screen gap-7 bg-blue-black">
       <div className="flex items-center justify-between bg-dark-blue-black row-span-1 col-span-full rounded-[30px] mt-5 mx-5">
@@ -46,9 +50,51 @@ function RoomLayout(props) {
             ))}
           </ul>
         ) : (
-          <div className="text-white m-5">
-            {/* Replace with your real chat UI */}
-            <p className="text-lg">Chat feature coming soon...</p>
+          <div className="flex flex-col justify-between row-span-7 col-span-2 text-white m-5">
+            <div className="flex-1 overflow-y-auto p-4 bg-light-blue rounded-lg border border-light-blue">
+              {props.msg.length === 0 ? (
+                <p className="text-gray-400">No messages yet.</p>
+              ) : (
+                props.msg.map((msg, idx) => (
+                  <div key={idx} className="mb-2">
+                    <span
+                      className={`font-semibold ${
+                        msg.senderId === props.hostId
+                          ? "text-white"
+                          : "text-indigo"
+                      }`}
+                    >
+                      {msg.senderId === props.hostId
+                        ? "You"
+                        : props.users.get(msg.senderId)}
+                      :
+                    </span>{" "}
+                    {msg.msg}
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-4 flex">
+              <input
+                type="text"
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 rounded-l-lg bg-light-blue px-4 py-2 text-white focus:outline-none"
+              />
+              <button
+                className="bg-indigo px-4 py-2 rounded-r-lg text-white transition-all hover:cursor-pointer hover:bg-light-blue border-indigo border-2"
+                onClick={() => {
+                  const msg = messageInput.trim();
+                  if (msg !== "") {
+                    props.sendMessage(msg);
+                    setMessageInput("");
+                  }
+                }}
+              >
+                Send
+              </button>
+            </div>
           </div>
         )}
       </div>

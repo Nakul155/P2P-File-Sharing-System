@@ -140,15 +140,17 @@ wss.on("connection", (ws) => {
       );
     } else if (message.type === "chat-message") {
       // {type = "chat-message", roomId, msg, senderId}
-      const room = userIdroomId.get(senderId);
+      const roomId = userIdroomId.get(message.senderId);
+      const room = roomIdMembers.get(roomId);
+      console.log(message);
       room.forEach((memberId) => {
-        if (memberId !== senderId) {
+        if (memberId !== message.senderId) {
           const memberWs = userIdWebSocket.get(memberId);
           memberWs.send(
             JSON.stringify({
               type: "chat-message",
-              senderId: senderId,
-              msg: msg,
+              senderId: message.senderId,
+              msg: message.msg,
             })
           );
         }
