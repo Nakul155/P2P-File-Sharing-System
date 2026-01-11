@@ -7,10 +7,11 @@ function LandingPage() {
   const handleClick = (event) => {
     navigate(`/${event.target.name}`, { state: { authorized: true } });
   };
+
   return (
     <div className="grid place-items-center h-screen bg-blue-black">
-      <div className="bg-dark-blue-black h-80 w-90 rounded-[30px]">
-        <div className="flex justify-center mt-10">
+      <div className="bg-dark-blue-black px-8 py-10 rounded-[30px]">
+        <div className="flex justify-center">
           <div className="w-15 h-15 bg-indigo rounded-full">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -25,7 +26,7 @@ function LandingPage() {
           <h1 className="text-white font-[arial] text-2xl font-semibold mt-2">
             P2P File Sharing
           </h1>
-          <p className="text-gray-400 font-[arial] text-sm mt-2">
+          <p className="text-gray-400 font-[arial] text-sm mt-2 mx-5">
             Share files securely with end-to-end encryption
           </p>
         </div>

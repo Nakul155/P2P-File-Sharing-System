@@ -1,12 +1,10 @@
 import { useNavigate, useLocation, useNavigationType } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
-import { useWebSocket } from "./WebSocketContext";
+import { useEffect, useState } from "react";
 
 function CreateRoom() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
-  const socket = useWebSocket();
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
@@ -19,24 +17,20 @@ function CreateRoom() {
 
   const handleClick = (event) => {
     event.preventDefault();
-    socket.send(JSON.stringify({ type: "create-room" }));
-
-    socket.onerror = (err) => {
-      console.error("Websocket Error", err);
-    };
-
-    socket.onmessage = async (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === "room") {
-        navigate(`/room?roomId=${message.roomId}`, {state: {userName}});
-      }
+    
+    if (!userName.trim()) {
+      alert("Please enter a user name");
+      return;
     }
+
+    // Navigate to room details page with username
+    navigate("/room-details", { state: { userName: userName.trim() } });
   }
 
   return (
     <div className="grid place-items-center h-screen bg-blue-black">
-      <div className="bg-dark-blue-black h-80 w-90 rounded-[30px]">
-        <div className="flex justify-center mt-5">
+      <div className="bg-dark-blue-black px-8 py-10 rounded-[30px]">
+        <div className="flex justify-center">
           <div className="w-15 h-15 bg-indigo rounded-full">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -51,17 +45,17 @@ function CreateRoom() {
           <h1 className="text-white font-[arial] text-2xl font-semibold mt-2">
             P2P File Sharing
           </h1>
-          <p className="text-gray-400 font-[arial] text-sm mt-2">
+          <p className="text-gray-400 font-[arial] text-sm mt-2 mx-5">
             Share files securely with end-to-end encryption
           </p>
         </div>
         <form onSubmit={handleClick}>
-          <div className="flex justify-center mt-9">
+          <div className="flex justify-center mt-5">
             <input
               type="text"
               placeholder="Enter user name"
               onChange={(e) => setUserName(e.target.value)}
-              className="bg-gray-500 text-white w-[80%] px-2 py-1 rounded-sm focus:outline-none text-sm"
+              className="bg-gray-500 text-white w-full px-2 py-1 rounded-sm focus:outline-none text-sm"
               required
             />
           </div>

@@ -11,6 +11,7 @@ const userIdWebSocket = new Map();
 const webSocketUserId = new Map();
 const roomIdMembers = new Map();
 const userIdroomId = new Map();
+const roomMetadata = new Map();
 
 wss.on("connection", (ws) => {
   ws.on("error", (err) => console.error("WebSocket error:", err));
@@ -41,6 +42,7 @@ wss.on("connection", (ws) => {
     const updatedMembers = members.filter((memberId) => memberId !== userId);
     if (!updatedMembers.length) {
       roomIdMembers.delete(roomId);
+      roomMetadata.delete(roomId); 
     } else {
       roomIdMembers.set(roomId, updatedMembers);
     }
@@ -50,10 +52,26 @@ wss.on("connection", (ws) => {
     const message = JSON.parse(data);
 
     if (message.type === "create-room") {
-      // {type = "create-room"}
+      // {type = "create-room", roomName, isPrivate, genre}
       const roomId = uuidv4();
       roomIdMembers.set(roomId, []);
-      ws.send(JSON.stringify({ type: "room", roomId }));
+      
+      // Store room metadata
+      roomMetadata.set(roomId, {
+        roomName: message.roomName || "Untitled Room",
+        isPrivate: message.isPrivate !== undefined ? message.isPrivate : true,
+        genre: message.genre || "General"
+      });
+      
+      ws.send(JSON.stringify({ 
+        type: "room", 
+        roomId,
+        roomName: roomMetadata.get(roomId).roomName,
+        isPrivate: roomMetadata.get(roomId).isPrivate,
+        genre: roomMetadata.get(roomId).genre
+      }));
+      
+      console.log(`Room created: ${roomId} - ${roomMetadata.get(roomId).roomName} (${roomMetadata.get(roomId).isPrivate ? 'Private' : 'Public'})`);
     } else if (message.type === "join-room") {
       // {type = "join-room", roomId}
       const roomId = message.roomId;
@@ -138,6 +156,32 @@ wss.on("connection", (ws) => {
       console.log(
         `${message.userId} has sent ice-candidate to ${targetUserId}`
       );
+    } else if (message.type === "list-public-rooms") {
+      // {type = "list-public-rooms", searchQuery (optional)}
+      const searchQuery = (message.searchQuery || "").toLowerCase().trim();
+      const publicRooms = [];
+      
+      // Iterate through all rooms and find public ones
+      for (const [roomId, members] of roomIdMembers.entries()) {
+        const metadata = roomMetadata.get(roomId);
+        if (metadata && !metadata.isPrivate && members.length < 5) {
+          // Filter by search query if provided
+          if (!searchQuery || metadata.roomName.toLowerCase().includes(searchQuery)) {
+            publicRooms.push({
+              roomId,
+              roomName: metadata.roomName,
+              genre: metadata.genre,
+              memberCount: members.length,
+              maxMembers: 5
+            });
+          }
+        }
+      }
+      
+      ws.send(JSON.stringify({
+        type: "public-rooms-list",
+        rooms: publicRooms
+      }));
     } else if (message.type === "chat-message") {
       // {type = "chat-message", roomId, msg, senderId}
       const roomId = userIdroomId.get(message.senderId);

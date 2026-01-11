@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
+import { useSearchParams, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { useWebSocket } from "./WebSocketContext";
 import RoomLayout from "./RoomLayout";
-import { use } from "react";
 
 function Room() {
   const navigate = useNavigate();
   const location = useLocation();
+  const navigationType = useNavigationType();
   const socket = useWebSocket();
 
   const [searchParams] = useSearchParams();
@@ -14,7 +14,6 @@ function Room() {
   const userName = location.state?.userName;
 
   if (!userName) {
-    console.log(1);
     window.location.href = "/";
     return null;
   }
@@ -31,6 +30,85 @@ function Room() {
   const dataChannels = useRef(new Map());
   const userId = useRef();
   const usersRef = useRef(users);
+
+  // Cleanup function
+  const cleanup = () => {
+    // Clean up peer connections
+    peerConnections.current.forEach((pc) => {
+      try {
+        pc.close();
+      } catch (e) {
+        console.error("Error closing peer connection:", e);
+      }
+    });
+    peerConnections.current.clear();
+
+    // Clean up data channels
+    dataChannels.current.forEach((dc) => {
+      try {
+        if (dc.readyState === "open" || dc.readyState === "connecting") {
+          dc.close();
+        }
+      } catch (e) {
+        console.error("Error closing data channel:", e);
+      }
+    });
+    dataChannels.current.clear();
+  };
+
+  // Handle browser back button - intercept and redirect
+  useEffect(() => {
+    // Push a state when entering room to intercept back button
+    // This creates a history entry so we can detect when user presses back
+    const currentUrl = window.location.href;
+    window.history.pushState({ preventBack: true, roomPage: true }, "", currentUrl);
+
+    const handlePopState = (event) => {
+      // Only handle if we're leaving the room
+      if (event.state?.roomPage || !event.state) {
+        // Clean up connections
+        cleanup();
+        
+        // Immediately redirect to landing page with full reload
+        window.location.href = "/";
+      }
+    };
+
+    // Listen for popstate events (browser back/forward)
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  // Also handle navigationType as additional check
+  useEffect(() => {
+    if (navigationType === "POP") {
+      cleanup();
+      window.location.href = "/";
+    }
+  }, [navigationType]);
+
+  // Handle page unload (browser close, refresh, etc.)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      cleanup();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   useEffect(() => {
     socket.send(
